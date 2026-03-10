@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>limn studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,300;0,6..96,400;0,6..96,600;1,6..96,300;1,6..96,400;1,6..96,600&family=Gowun+Batang:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sand:       #D4B896;
+    --sand-pale:  #EAD9C0;
+    --burnt:      #C4743A;
+    --ember:      #E8824A;
+    --midnight:   #070510;
+    --dusk-deep:  #0F0B1A;
+    --dusk-mid:   #1A1228;
+    --horizon:    #2A1A0E;
+    --dune-dark:  #0A0714;
+    --dune-mid:   #160E20;
+    --dune-top:   #1E1430;
+    --star:       #F5EDD8;
+    --indigo:     #2D1F4E;
+    --violet:     #6B3F8C;
+    --rose-dusk:  #A8436A;
+    --ice:        #B8D4E8;
+    --gold:       #E8C87A;
+    --horizon-glow: #3D1F08;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: var(--midnight);
+    color: var(--star);
+    font-family: 'Gowun Batang', serif;
+    font-weight: 400;
+    overflow-x: hidden;
+  }
+  ::-webkit-scrollbar { width: 2px; }
+  ::-webkit-scrollbar-track { background: var(--midnight); }
+  ::-webkit-scrollbar-thumb { background: var(--burnt); }
+
+  /* ════════════════════════════════
+     FIXED LAYERS
+  ════════════════════════════════ */
+
+  /* 별 캔버스 */
+  #starfield {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 0;
+  }
+  #starfield canvas { width:100%; height:100%; }
+
+  /* 지평선 글로우 — 아주 미세하게 */
+  .horizon-line {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 420px;
+    pointer-events: none; z-index: 1;
+    background: linear-gradient(to top,
+      rgba(60,28,8,0.55)   0%,
+      rgba(80,36,12,0.22)  18%,
+      rgba(120,55,20,0.08) 36%,
+      rgba(168,67,106,0.04) 55%,
+      transparent          100%);
+  }
+
+  /* 커서 글로우 */
+  #cg {
+    position: fixed; pointer-events: none; z-index: 0;
+    width: 340px; height: 340px; border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(196,116,58,0.055) 0%,
+      transparent 68%);
+    transform: translate(-50%,-50%);
+    transition: left .6s ease, top .6s ease;
+  }
+
+  /* ════════════════════════════════
+     NAV
+  ════════════════════════════════ */
+  nav {
+    position: fixed; top:0; left:0; right:0;
+    z-index: 300;
+    padding: 24px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background .4s, border-color .4s;
+  }
+  nav.scrolled {
+    background: rgba(7,5,16,0.95);
+    border-bottom: 1px solid rgba(245,237,216,0.05);
+    backdrop-filter: blur(14px);
+  }
+  .nav-logo {
+    font-family: 'Space Mono', monospace;
+    font-weight: 400;
+    font-size: 0.82rem;
+    letter-spacing: 0.16em;
+    color: var(--sand);
+    text-decoration: none;
+    text-transform: lowercase;
+  }
+  .nav-links { display:flex; gap:38px; list-style:none; }
+  .nav-links a {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245,237,216,0.4);
+    text-decoration: none;
+    transition: color .3s;
+    position: relative;
+  }
+  .nav-links a::after {
+    content:''; position:absolute; bottom:-3px; left:0;
+    width:0; height:1px; background:var(--burnt);
+    transition: width .3s;
+  }
+  .nav-links a:hover { color: var(--sand); }
+  .nav-links a:hover::after { width:100%; }
+
+  /* ════════════════════════════════
+     HERO
+  ════════════════════════════════ */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    z-index: 2;
+    padding: 0 60px;
+    text-align: center;
+  }
+
+  /* 사막 언덕 — SVG로 직접 그림 */
+  .dunes-wrap {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 52vh;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .dunes-wrap svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* 달 */
+  .moon {
+    position: absolute;
+    top: 14%; right: 16%;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 38%,
+      rgba(245,237,216,0.92) 0%,
+      rgba(232,200,122,0.75) 40%,
+      rgba(196,150,80,0.3) 70%,
+      transparent 100%);
+    box-shadow:
+      0 0 40px 10px rgba(232,200,122,0.18),
+      0 0 100px 30px rgba(196,116,58,0.08);
+    pointer-events: none;
+    z-index: 2;
+    animation: moon-float 9s ease-in-out infinite;
+  }
+  @keyframes moon-float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+
+  /* 달 헤일로 */
+  .moon-halo {
+    position: absolute;
+    top: 14%; right: 16%;
+    width: 80px; height: 80px;
+    margin: -30px;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(232,200,122,0.07) 0%,
+      transparent 65%);
+    pointer-events: none; z-index: 1;
+    animation: moon-float 9s ease-in-out infinite;
+  }
+
+  /* 히어로 텍스트 */
+  .hero-content {
+    position: relative; z-index: 4;
+    animation: hero-in 1.3s cubic-bezier(.22,1,.36,1) forwards;
+  }
+  @keyframes hero-in {
+    from { opacity:0; transform: translateY(24px); }
+    to   { opacity:1; transform: none; }
+  }
+
+  .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgba(196,116,58,0.8);
+    margin-bottom: 28px;
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+  }
+  .hero-eyebrow::before,
+  .hero-eyebrow::after {
+    content:''; display:inline-block;
+    width:28px; height:1px; background:rgba(196,116,58,0.5);
+  }
+
+  .hero-studio {
+    font-family: 'Bodoni Moda', serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-size: clamp(2.8rem, 7vw, 6.5rem);
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
+    color: var(--star);
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  /* 'limn' 강조 */
+  .hero-studio .accent {
+    color: var(--sand);
+    position: relative;
+  }
+  /* 언더라인 — 가느다란 빛 선 */
+  .hero-studio .accent::after {
+    content:'';
+    position: absolute;
+    bottom: -4px; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent, var(--burnt), transparent);
+  }
+
+  .hero-subtitle {
+    font-family: 'Bodoni Moda', serif; font-optical-sizing: auto;
+    font-style: italic;
+    font-weight: 300;
+    font-size: clamp(1rem, 2.2vw, 1.5rem);
+    color: rgba(245,237,216,0.38);
+    letter-spacing: 0.06em;
+    margin-bottom: 44px;
+  }
+
+  .hero-desc {
+    font-family: 'Gowun Batang', serif;
+    font-size: 0.88rem;
+    line-height: 2;
+    color: rgba(245,237,216,0.52);
+    max-width: 420px;
+    margin: 0 auto 48px;
+  }
+
+  .hero-chips {
+    display: flex; flex-wrap: wrap;
+    gap: 10px; justify-content: center;
+  }
+  .hero-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border: 1px solid rgba(196,116,58,0.22);
+    color: rgba(212,184,150,0.6);
+    transition: all .3s;
+  }
+  .hero-chip:hover {
+    border-color: rgba(196,116,58,0.55);
+    color: var(--sand);
+  }
+
+  /* 스크롤 인디케이터 */
+  .scroll-hint {
+    position: absolute;
+    bottom: calc(52vh + 24px);
+    left: 50%; transform: translateX(-50%);
+    z-index: 5;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245,237,216,0.2);
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+    animation: scroll-fade 3s ease-in-out infinite;
+  }
+  @keyframes scroll-fade {
+    0%,100% { opacity:.4; transform: translateX(-50%) translateY(0); }
+    50%      { opacity:.9; transform: translateX(-50%) translateY(5px); }
+  }
+  .scroll-arrow {
+    width: 1px; height: 32px;
+    background: linear-gradient(to bottom, rgba(196,116,58,0.6), transparent);
+  }
+
+  /* ════════════════════════════════
+     섹션 공통
+  ════════════════════════════════ */
+  section {
+    position: relative; z-index: 2;
+    padding: 130px 60px;
+  }
+
+  /* 섹션 배경 — 모래 언덕 그라디언트 느낌 */
+  section:nth-child(odd) {
+    background: linear-gradient(180deg,
+      rgba(15,11,26,0) 0%,
+      rgba(18,12,22,0.6) 50%,
+      rgba(15,11,26,0) 100%);
+  }
+
+  .s-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--burnt);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .s-label::before {
+    content:''; display:inline-block;
+    width:20px; height:1px; background:var(--burnt);
+  }
+  .s-title {
+    font-family: 'Bodoni Moda', serif; font-optical-sizing: auto;
+    font-weight: 300;
+    font-size: clamp(2rem, 3.6vw, 3rem);
+    line-height: 1.15;
+    color: var(--star);
+    margin-bottom: 60px;
+  }
+  .s-title em { font-style:italic; color:var(--sand); }
+
+  /* 섹션 구분선 */
+  .hr {
+    position: relative; z-index: 2;
+    margin: 0 60px;
+    height: 1px;
+    background: linear-gradient(to right,
+      transparent,
+      rgba(196,116,58,0.2) 30%,
+      rgba(196,116,58,0.2) 70%,
+      transparent);
+  }
+
+  /* reveal */
+  .r {
+    opacity:0; transform: translateY(20px);
+    transition: opacity .72s ease, transform .72s ease;
+  }
+  .r.on { opacity:1; transform:none; }
+  .r.d1 { transition-delay:.06s; }
+  .r.d2 { transition-delay:.13s; }
+  .r.d3 { transition-delay:.20s; }
+  .r.d4 { transition-delay:.27s; }
+
+  /* ════════════════════════════════
+     CREATOR (ABOUT) 섹션
+     히어로 바로 다음 — 모래 언덕 위 첫 섹션
+  ════════════════════════════════ */
+  #creator {
+    padding-top: 140px;
+    background: linear-gradient(180deg,
+      rgba(22,14,30,0.9) 0%,
+      rgba(13,10,20,0.7) 100%);
+  }
+
+  /* 가로 레이아웃 — 왼쪽 사진, 오른쪽 텍스트 */
+  .creator-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+
+  .creator-photo-col {
+    position: sticky; top: 110px;
+  }
+
+  .photo-frame {
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: linear-gradient(155deg,
+      rgba(45,31,78,0.4) 0%,
+      rgba(22,14,30,0.6) 100%);
+    border: 1px solid rgba(107,63,140,0.15);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 22px;
+  }
+  .photo-frame img {
+    width:100%; height:100%; object-fit:cover;
+    position:absolute; inset:0;
+  }
+  .photo-placeholder {
+    font-family: 'Bodoni Moda', serif; font-optical-sizing: auto;
+    font-style:italic;
+    font-size: 5rem;
+    color: rgba(245,237,216,0.05);
+    user-select:none;
+    z-index:1;
+  }
+  .photo-frame::after {
+    content:''; position:absolute;
+    bottom:0; left:0; right:0; height:55%;
+    background: linear-gradient(to top, rgba(7,5,16,.7), transparent);
+    z-index:2;
+  }
+  .photo-caption {
+    position:absolute; bottom:15px; left:16px; right:16px;
+    z-index:3;
+    font-family:'Space Mono',monospace;
+    font-size:0.53rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:rgba(245,237,216,0.3);
+  }
+
+  .creator-name-en {
+    font-family: 'Bodoni Moda', serif; font-optical-sizing: auto;
+    font-style: italic;
+    font-size: 1.5rem;
+    color: var(--star);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .creator-role {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(245,237,216,0.28);
+  }
+
+  /* 오른쪽 텍스트 영역 */
+  .creator-text { padding-top: 4px; }
+
+  .creator-quote {
+    font-family: 'Gowun Batang', serif;
+    font-style: italic;
+    font-size: clamp(1.15rem, 2vw, 1.45rem);
+    line-height: 1.7;
+    color: var(--sand);
+    border-left: 2px solid rgba(196,116,58,0.5);
+    padding-left: 26px;
+    margin-bottom: 44px;
+  }
+
+  .creator-body {
+    font-family: 'Gowun Batang', serif;
+    font-size: 0.88rem;
+    line-height: 2.05;
+    color: rgba(245,237,216,0.56);
+    margin-bottom: 44px;
+  }
+  .creator-body p { margin-bottom: 18px; }
+
+  .kw-row { display:flex; flex-wrap:wrap; gap:9px; margin-bottom:44px; }
+  .kw {
+    font-family: 'Bodoni Moda', serif; font-optical-sizing: auto;
+    font-style: italic;
+    font-size: 0.93rem;
+    color: rgba(245,237,216,0.42);
+    padding: 5px 14px;
+    border: 1px solid rgba(245,237,216,0.09);
+    transition: all .3s; cursor:default;
+  }
+  .kw:hover { color:var(--sand); border-color:rgba(196,116,58,.35); }
+
+  .tools-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.56rem; letter-spacing:.2em;
+    text-transform:uppercase;
+    color:rgba(245,237,216,.25);
+    margin-bottom: 12px;
+  }
+  .tools-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .tool {
+    font-family:'Space Mono',monospace;
+    font-size:0.58rem; letter-spacing:.1em;
+    padding:4px 12px;
+    background:rgba(245,237,216,0.025);
+    border:1px solid rgba(245,237,216,0.07);
+    color:rgba(245,237,216,.38);
+  }
+
+  /* ════════════════════════════════
+     NOW MAKING
+  ════════════════════════════════ */
+  #now {
+    background: linear-gradient(180deg,
+      rgba(10,7,20,0.3) 0%,
+      rgba(14,10,22,0.5) 100%);
+  }
+
+  .now-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+  }
+
+  .now-card {
+    padding: 42px 38px;
+    background: rgba(245,237,216,0.02);
+    border: 1px solid rgba(245,237,216,0.055);
+    position: relative; overflow: hidden;
+    transition: background .35s;
+  }
+  .now-card:hover { background: rgba(245,237,216,0.04); }
+  .now-card::before {
+    content:''; position:absolute; top:0; left:0;
+    width:2px; height:0; background:var(--burnt);
+    transition: height .4s;
+  }
+  .now-card:hover::before { height:100%; }
+  .now-card-num {
+    position:absolute; right:12px; bottom:4px;
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto; font-style:italic;
+    font-size:6.5rem; line-height:1;
+    color:rgba(245,237,216,0.025);
+    pointer-events:none; user-select:none;
+  }
+
+  .now-status {
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:'Space Mono',monospace;
+    font-size:0.54rem; letter-spacing:.16em; text-transform:uppercase;
+    color:rgba(245,237,216,.28); margin-bottom:18px;
+  }
+  .dot {
+    width:6px; height:6px; border-radius:50%;
+    background:#4ADE80;
+    animation: blink 2.2s ease-in-out infinite;
+  }
+  .dot.amber { background:var(--gold); animation:none; }
+  .dot.muted { background:rgba(245,237,216,.22); animation:none; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:.18} }
+
+  .now-card-title {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto;
+    font-size:1.65rem; color:var(--star);
+    margin-bottom:4px; line-height:1.15;
+  }
+  .now-card-sub {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto; font-style:italic;
+    font-size:0.85rem; color:rgba(245,237,216,.28);
+    margin-bottom:16px; letter-spacing:.04em;
+  }
+  .now-card-desc { font-family:'Gowun Batang',serif;
+    font-size:0.84rem; line-height:1.85;
+    color:rgba(245,237,216,.48); margin-bottom:20px;
+  }
+  .now-card-tags { display:flex; flex-wrap:wrap; gap:6px; }
+  .now-tag {
+    font-family:'Space Mono',monospace;
+    font-size:0.53rem; letter-spacing:.1em;
+    padding:3px 10px;
+    border:1px solid rgba(196,116,58,0.2);
+    color:rgba(212,184,150,.55); text-transform:uppercase;
+  }
+
+  /* ════════════════════════════════
+     WORKS
+  ════════════════════════════════ */
+  #works {}
+
+  /* 탭 */
+  .works-tabs {
+    display:flex; gap:0;
+    border-bottom:1px solid rgba(245,237,216,0.07);
+    margin-bottom:46px;
+  }
+  .tab-btn {
+    font-family:'Space Mono',monospace;
+    font-size:0.63rem; letter-spacing:.18em; text-transform:uppercase;
+    color:rgba(245,237,216,.32);
+    padding:12px 24px;
+    background:none; border:none; cursor:pointer;
+    position:relative; transition:color .3s;
+  }
+  .tab-btn::after {
+    content:''; position:absolute;
+    bottom:-1px; left:0; right:0; height:2px;
+    background:var(--burnt); transform:scaleX(0); transition:transform .3s;
+  }
+  .tab-btn.active { color:var(--sand); }
+  .tab-btn.active::after { transform:scaleX(1); }
+
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* 영상 */
+  .video-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(290px,1fr));
+    gap:18px;
+  }
+  .video-card {
+    background:rgba(245,237,216,0.02);
+    border:1px solid rgba(245,237,216,0.07);
+    overflow:hidden; transition:border-color .3s; cursor:pointer;
+  }
+  .video-card:hover { border-color:rgba(196,116,58,.25); }
+  .video-thumb {
+    aspect-ratio:16/9;
+    background:rgba(45,31,78,0.22);
+    display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+  }
+  .video-thumb iframe { width:100%; height:100%; border:none; }
+  .play-icon {
+    position:absolute;
+    width:46px; height:46px; border-radius:50%;
+    background:rgba(196,116,58,0.8);
+    display:flex; align-items:center; justify-content:center;
+    z-index:2; transition:transform .3s, background .3s;
+  }
+  .play-icon svg { margin-left:3px; }
+  .video-card:hover .play-icon { transform:scale(1.1); background:var(--burnt); }
+  .video-info { padding:18px 20px; }
+  .video-tag {
+    font-family:'Space Mono',monospace;
+    font-size:0.53rem; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--burnt); margin-bottom:7px;
+  }
+  .video-title {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto;
+    font-size:1.08rem; color:var(--star);
+    margin-bottom:5px; line-height:1.3;
+  }
+  .video-desc { font-family:'Gowun Batang',serif; font-size:0.78rem; line-height:1.7; color:rgba(245,237,216,.4); }
+
+  /* 음악 리스트 */
+  .music-list { display:flex; flex-direction:column; gap:2px; }
+  .music-item {
+    display:grid; grid-template-columns:56px 1fr auto;
+    gap:22px; align-items:center;
+    padding:20px 26px;
+    background:rgba(245,237,216,0.02);
+    border:1px solid rgba(245,237,216,0.055);
+    transition:background .3s; cursor:pointer;
+  }
+  .music-item:hover { background:rgba(245,237,216,0.04); }
+  .music-num {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto; font-style:italic;
+    font-size:1.55rem; color:rgba(245,237,216,.1); text-align:center;
+  }
+  .music-title { font-family:'Bodoni Moda',serif; font-optical-sizing:auto; font-size:1.08rem; color:var(--star); margin-bottom:2px; }
+  .music-sub { font-family:'Gowun Batang',serif; font-size:0.77rem; color:rgba(245,237,216,.36); }
+  .music-tag {
+    font-family:'Space Mono',monospace; font-size:0.53rem;
+    letter-spacing:.1em; text-transform:uppercase;
+    padding:3px 9px;
+    border:1px solid rgba(196,116,58,0.2);
+    color:rgba(212,184,150,.5); white-space:nowrap;
+  }
+
+  /* 비주얼 갤러리 */
+  .img-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+    gap:12px;
+  }
+  .img-card {
+    aspect-ratio:3/4;
+    background:rgba(45,31,78,0.18);
+    border:1px solid rgba(245,237,216,0.07);
+    overflow:hidden; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:border-color .3s;
+  }
+  .img-card:hover { border-color:rgba(196,116,58,.3); }
+  .img-card img {
+    width:100%;height:100%;object-fit:cover;
+    position:absolute;inset:0; transition:transform .5s;
+  }
+  .img-card:hover img { transform:scale(1.05); }
+  .img-overlay {
+    position:absolute;inset:0;
+    background:linear-gradient(to top,rgba(7,5,16,.72) 0%,transparent 50%);
+    z-index:2;opacity:0;transition:opacity .3s;
+  }
+  .img-card:hover .img-overlay { opacity:1; }
+  .img-label {
+    position:absolute;bottom:13px;left:13px;right:13px;z-index:3;
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto;font-size:.88rem;color:var(--star);
+    opacity:0;transform:translateY(5px);transition:all .3s;
+  }
+  .img-card:hover .img-label { opacity:1;transform:none; }
+  .img-placeholder {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto;font-style:italic;
+    font-size:2.8rem;color:rgba(245,237,216,.05);user-select:none;
+  }
+
+  /* ════════════════════════════════
+     CONTESTS
+  ════════════════════════════════ */
+  #contests {
+    background: linear-gradient(180deg,
+      rgba(22,14,30,0.5) 0%,
+      rgba(10,7,18,0.3) 100%);
+  }
+
+  .contest-list { display:flex; flex-direction:column; gap:2px; }
+  .contest-row {
+    display:grid; grid-template-columns:94px 1fr auto;
+    gap:38px; align-items:start;
+    padding:30px 34px;
+    background:rgba(245,237,216,0.02);
+    border:1px solid rgba(245,237,216,0.055);
+    position:relative; overflow:hidden; transition:background .3s;
+  }
+  .contest-row::before {
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(90deg,rgba(196,116,58,0.04),transparent 50%);
+    opacity:0;transition:opacity .3s;
+  }
+  .contest-row:hover { background:rgba(245,237,216,0.033); }
+  .contest-row:hover::before { opacity:1; }
+
+  .contest-year {
+    font-family:'Space Mono',monospace;font-size:.7rem;
+    letter-spacing:.1em;color:var(--burnt);padding-top:3px;
+  }
+  .contest-name {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto;font-size:1.15rem;
+    color:var(--star);margin-bottom:6px;
+  }
+  .contest-desc { font-family:'Gowun Batang',serif; font-size:.81rem;line-height:1.72;color:rgba(245,237,216,.42); }
+
+  .badge {
+    font-family:'Space Mono',monospace;font-size:.53rem;
+    letter-spacing:.14em;text-transform:uppercase;
+    padding:5px 12px;border:1px solid;white-space:nowrap;align-self:center;
+  }
+  .badge-gold   { color:var(--gold);       border-color:rgba(232,200,122,.35); }
+  .badge-silver { color:var(--ice);        border-color:rgba(184,212,232,.3);  }
+  .badge-submit { color:rgba(245,237,216,.36); border-color:rgba(245,237,216,.13); }
+  .badge-prep   { color:var(--violet);     border-color:rgba(107,63,140,.3);   }
+
+  /* ════════════════════════════════
+     CONTACT
+  ════════════════════════════════ */
+  #contact {
+    text-align:center;
+    padding:120px 60px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* contact 섹션 안 사막 언덕 배경 장식 */
+  .contact-dune {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 200px;
+    pointer-events: none; z-index: 0;
+  }
+  .contact-dune svg { width:100%; height:100%; display:block; }
+
+  .contact-inner { max-width:520px; margin:0 auto; position:relative; z-index:1; }
+  .contact-eyebrow {
+    font-family:'Space Mono',monospace;font-size:.58rem;
+    letter-spacing:.26em;text-transform:uppercase;
+    color:var(--burnt);margin-bottom:22px;
+  }
+  .contact-title {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto;font-weight:300;
+    font-size:clamp(2.2rem,4.5vw,3.5rem);line-height:1.12;
+    color:var(--star);margin-bottom:18px;
+  }
+  .contact-title em { font-style:italic;color:var(--sand); }
+  .contact-desc {
+    font-size:.86rem;line-height:1.95;
+    color:rgba(245,237,216,.5);margin-bottom:44px;
+  }
+  .contact-email {
+    font-family:'Bodoni Moda',serif; font-optical-sizing:auto;font-style:italic;
+    font-size:1.45rem;color:var(--sand);
+    text-decoration:none;
+    border-bottom:1px solid rgba(212,184,150,.28);
+    padding-bottom:3px;display:inline-block;margin-bottom:36px;
+    transition:color .3s, border-color .3s;
+  }
+  .contact-email:hover { color:var(--star);border-color:rgba(212,184,150,.7); }
+  .contact-note {
+    font-family:'Space Mono',monospace;font-size:.58rem;
+    letter-spacing:.14em;color:rgba(245,237,216,.2);
+  }
+
+  /* ════════════════════════════════
+     FOOTER
+  ════════════════════════════════ */
+  footer {
+    position:relative;z-index:2;
+    padding:30px 60px;
+    border-top:1px solid rgba(245,237,216,0.05);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .footer-l {
+    font-family:'Space Mono',monospace;font-size:.75rem;
+    letter-spacing:.2em;color:rgba(245,237,216,.18);text-transform:lowercase;
+  }
+  .footer-r {
+    font-family:'Space Mono',monospace;font-size:.54rem;
+    letter-spacing:.14em;color:rgba(245,237,216,.16);
+  }
+
+  /* ════════════════════════════════
+     모바일
+  ════════════════════════════════ */
+  @media(max-width:860px){
+    nav{padding:18px 22px;}
+    .nav-links{display:none;}
+    section,.hero{padding:90px 22px;}
+    .creator-grid{grid-template-columns:1fr;gap:36px;}
+    .creator-photo-col{position:static;}
+    .now-grid{grid-template-columns:1fr;}
+    .contest-row{grid-template-columns:1fr;gap:10px;}
+    .badge{align-self:start;}
+    footer{flex-direction:column;gap:10px;text-align:center;}
+    .hr{margin:0 22px;}
+    .dunes-wrap{height:38vh;}
+    .scroll-hint{bottom:calc(38vh + 20px);}
+  }
+</style>
+</head>
+<body>
+
+<!-- 별 캔버스 -->
+<div id="starfield"><canvas id="stars-canvas"></canvas></div>
+<!-- 지평선 글로우 -->
+<div class="horizon-line"></div>
+<!-- 커서 글로우 -->
+<div id="cg"></div>
+
+<!-- ── NAV ── -->
+<nav id="nav">
+  <a href="#" class="nav-logo">limn studio</a>
+  <ul class="nav-links">
+    <li><a href="#creator">Creator</a></li>
+    <li><a href="#now">진행 중</a></li>
+    <li><a href="#works">작업물</a></li>
+    <li><a href="#contests">공모전</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- ════════════════════════════════
+     HERO
+════════════════════════════════ -->
+<section class="hero" id="top">
+
+  <!-- 달 -->
+  <div class="moon-halo"></div>
+  <div class="moon"></div>
+
+  <!-- 히어로 텍스트 -->
+  <div class="hero-content">
+    <div class="hero-eyebrow">independent creative studio</div>
+    <div class="hero-studio">
+      <span class="accent">limn</span> studio
+    </div>
+    <div class="hero-subtitle">글과 음악과 이미지로 세계를 짓는다</div>
+    <p class="hero-desc">
+      경계에서 오래 머문 사람이 만드는 이야기들.<br>
+      텍스트·사운드·비주얼이 서로를 지탱하는<br>
+      멀티미디어 창작의 공간.
+    </p>
+    <div class="hero-chips">
+      <span class="hero-chip">웹소설</span>
+      <span class="hero-chip">세계관 빌딩</span>
+      <span class="hero-chip">캐릭터 OST</span>
+      <span class="hero-chip">AI 비주얼</span>
+      <span class="hero-chip">멀티미디어</span>
+    </div>
+  </div>
+
+  <!-- 스크롤 힌트 -->
+  <div class="scroll-hint">
+    <div class="scroll-arrow"></div>
+    scroll
+  </div>
+
+  <!-- 사막 언덕 실루엣 SVG -->
+  <div class="dunes-wrap">
+    <svg viewBox="0 0 1440 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- 언덕 그라디언트들 -->
+        <linearGradient id="dune1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#16102A" stop-opacity="0.95"/>
+          <stop offset="100%" stop-color="#0A0714" stop-opacity="1"/>
+        </linearGradient>
+        <linearGradient id="dune2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1E1530" stop-opacity="0.98"/>
+          <stop offset="100%" stop-color="#0D0A18" stop-opacity="1"/>
+        </linearGradient>
+        <linearGradient id="dune3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#120C20" stop-opacity="1"/>
+          <stop offset="100%" stop-color="#070510" stop-opacity="1"/>
+        </linearGradient>
+        <!-- 지평선 빛 글로우 -->
+        <linearGradient id="glowH" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#C4743A" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="#C4743A" stop-opacity="0"/>
+        </linearGradient>
+        <filter id="blur-sm">
+          <feGaussianBlur stdDeviation="2"/>
+        </filter>
+      </defs>
+
+      <!-- 지평선 글로우 줄기 -->
+      <ellipse cx="720" cy="100" rx="900" ry="18"
+        fill="url(#glowH)" filter="url(#blur-sm)" opacity="0.7"/>
+
+      <!-- 맨 뒤 — 가장 낮고 넓은 언덕 (원경) -->
+      <path d="
+        M-10 400
+        L-10 210
+        C80 195, 160 180, 260 178
+        C380 175, 440 188, 520 182
+        C600 176, 660 160, 720 158
+        C780 156, 840 168, 920 174
+        C1000 180, 1080 188, 1180 178
+        C1280 168, 1360 172, 1450 180
+        L1450 400 Z"
+        fill="url(#dune1)" opacity="0.85"/>
+
+      <!-- 중간 언덕 -->
+      <path d="
+        M-10 400
+        L-10 260
+        C60 248, 130 235, 220 228
+        C310 221, 360 240, 430 248
+        C500 256, 550 260, 610 250
+        C670 240, 700 218, 760 210
+        C820 202, 870 218, 940 230
+        C1010 242, 1080 255, 1160 245
+        C1240 235, 1320 220, 1400 228
+        C1420 230, 1440 232, 1450 234
+        L1450 400 Z"
+        fill="url(#dune2)" opacity="0.92"/>
+
+      <!-- 앞 언덕 — 가장 어둡고 큰 메인 실루엣 -->
+      <path d="
+        M-10 400
+        L-10 330
+        C40 320, 80 308, 140 295
+        C200 282, 240 278, 300 272
+        C360 266, 400 270, 450 265
+        C500 260, 530 250, 580 242
+        C630 234, 660 230, 700 226
+        C740 222, 770 228, 820 238
+        C870 248, 910 258, 970 262
+        C1030 266, 1090 264, 1150 255
+        C1210 246, 1270 235, 1340 240
+        C1380 244, 1420 252, 1450 258
+        L1450 400 Z"
+        fill="url(#dune3)" opacity="1"/>
+
+      <!-- 맨 앞 — 가장 낮은 고지, 화면 하단 -->
+      <path d="
+        M-10 400
+        L-10 370
+        C100 358, 200 345, 320 342
+        C440 339, 510 350, 600 355
+        C690 360, 750 355, 820 348
+        C890 341, 960 338, 1060 345
+        C1160 352, 1280 362, 1400 368
+        L1450 370 L1450 400 Z"
+        fill="#070510" opacity="1"/>
+
+      <!-- 능선 위 미세한 빛 선 (사막 모래가 빛 받는 느낌) -->
+      <path d="
+        M140 295 C200 282, 240 278, 300 272
+        C360 266, 400 270, 450 265
+        C500 260, 530 250, 580 242
+        C630 234, 660 230, 700 226
+        C740 222, 770 228, 820 238"
+        fill="none" stroke="rgba(196,116,58,0.12)" stroke-width="1.5"
+        filter="url(#blur-sm)"/>
+    </svg>
+  </div>
+</section>
+
+<div class="hr"></div>
+
+<!-- ════════════════════════════════
+     CREATOR
+════════════════════════════════ -->
+<section id="creator">
+  <div class="s-label">Creator</div>
+  <h2 class="s-title">이 공간을<br><em>만드는 사람</em></h2>
+
+  <div class="creator-grid">
+    <!-- 사진 -->
+    <div class="creator-photo-col r">
+      <div class="photo-frame">
+        <!-- GitHub에 올릴 때: 이 HTML 파일과 같은 폴더에 photo.png 같이 넣기 -->
+        <img src="photo.png" alt="애솔">
+        <div class="photo-caption">애솔 · AeSol Moon · limn studio</div>
+      </div>
+      <span class="creator-name-en">AeSol Moon</span>
+      <span class="creator-role">Writer · World Builder · Multimedia Creator</span>
+    </div>
+
+    <!-- 텍스트 -->
+    <div class="creator-text">
+      <div class="creator-quote r">
+        "나는 여전히 경계에 있다.<br>
+        다만 이제는 새로운 삶의 자세로<br>
+        경계에 머무는 것을 선택한 경계인이다."
+      </div>
+
+      <div class="creator-body r d1">
+        <p>
+          어디에도 완전히 속하지 않은 자리에서 오래 살아왔다. 그 '속하지 않음'이 한때는 결핍처럼 느껴졌지만, 이제는 그 경계의 감각이 창작의 뿌리가 되었다. 경계에서만 볼 수 있는 것들이 있고, 경계에서만 쓸 수 있는 이야기들이 있다.
+        </p>
+        <p>
+          limn studio는 그 이야기들을 만드는 공간이다. 글을 쓰고, 음악을 만들고, 이미지를 빚는다. 하나의 세계관에서 출발해 텍스트·사운드·비주얼이 서로를 지탱하는 멀티미디어 창작을 지향한다. 독자가 여러 감각으로 같은 세계를 경험할 수 있도록.
+        </p>
+        <p>
+          현재는 한국형 로맨스판타지 웹소설을 집필하면서 캐릭터 OST와 AI 비주얼 작업을 병행하고 있다. 카카오페이지 연재를 목표로 하는 150화 완결 장편이 메인 프로젝트다.
+        </p>
+      </div>
+
+      <div class="kw-row r d2">
+        <span class="kw">경계인</span>
+        <span class="kw">관측자</span>
+        <span class="kw">이야기 짓기</span>
+        <span class="kw">유한한 시간</span>
+        <span class="kw">선택의 무게</span>
+        <span class="kw">멀티미디어</span>
+        <span class="kw">세계관 빌딩</span>
+      </div>
+
+      <div class="r d3">
+        <div class="tools-label">주로 쓰는 도구</div>
+        <div class="tools-row">
+          <span class="tool">Claude</span>
+          <span class="tool">ChatGPT</span>
+          <span class="tool">Gemini</span>
+          <span class="tool">Suno</span>
+          <span class="tool">AI Image Gen</span>
+          <span class="tool">KakaoPage</span>
+          <span class="tool">조아라</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hr"></div>
+
+<!-- ════════════════════════════════
+     NOW MAKING
+════════════════════════════════ -->
+<section id="now">
+  <div class="s-label">Now Making</div>
+  <h2 class="s-title">지금 하고 있는<br><em>작업들</em></h2>
+
+  <div class="now-grid">
+    <div class="now-card r d1">
+      <div class="now-card-num">01</div>
+      <div class="now-status"><span class="dot"></span>집필 중</div>
+      <div class="now-card-title">IF 드래곤편</div>
+      <div class="now-card-sub">IF Dragon Edition</div>
+      <div class="now-card-desc">드래곤 왕국 에테르노를 배경으로 한 한국형 로맨스판타지 웹소설. 드래곤 신부 계약으로 시작된 관계가 계약을 넘어 서로를 선택하는 이야기. 카카오페이지 연재를 목표로 150화 완결을 향해 집필 중.</div>
+      <div class="now-card-tags">
+        <span class="now-tag">장편 웹소설</span>
+        <span class="now-tag">~80화 / 150화</span>
+        <span class="now-tag">로맨스판타지</span>
+      </div>
+    </div>
+
+    <div class="now-card r d2">
+      <div class="now-card-num">02</div>
+      <div class="now-status"><span class="dot amber"></span>진행 중</div>
+      <div class="now-card-title">캐릭터 OST</div>
+      <div class="now-card-sub">Character Original Soundtrack</div>
+      <div class="now-card-desc">Suno를 활용해 제작하는 캐릭터 테마 음악 시리즈. 펠리르·바르가스·여주 테마를 중심으로, AI 비주얼 영상과 함께 뮤직비디오 형태로 제작·공개 중.</div>
+      <div class="now-card-tags">
+        <span class="now-tag">Suno</span>
+        <span class="now-tag">AI MV</span>
+        <span class="now-tag">캐릭터 음악</span>
+      </div>
+    </div>
+
+    <div class="now-card r d3">
+      <div class="now-card-num">03</div>
+      <div class="now-status"><span class="dot amber"></span>구축 중</div>
+      <div class="now-card-title">본편 세계관</div>
+      <div class="now-card-sub">경계의 비 · The Rain at the Border</div>
+      <div class="now-card-desc">IF 드래곤편의 원형이 되는 본편 시간선. 초월이 가능한 순간에도 인간으로 남기를 선택한 경계인의 이야기. 영화 제작을 최종 목표로 세계관 바이블 구축 중.</div>
+      <div class="now-card-tags">
+        <span class="now-tag">세계관 바이블</span>
+        <span class="now-tag">영화 목표</span>
+        <span class="now-tag">장기 프로젝트</span>
+      </div>
+    </div>
+
+    <div class="now-card r d1">
+      <div class="now-card-num">04</div>
+      <div class="now-status"><span class="dot muted"></span>준비 중</div>
+      <div class="now-card-title">개방선 (초월편)</div>
+      <div class="now-card-sub">The Open Path</div>
+      <div class="now-card-desc">초월자가 되는 것을 선택한 시간선. 웹소설 및 웹툰 확장을 예정하고 있는 세 번째 시간선 프로젝트.</div>
+      <div class="now-card-tags">
+        <span class="now-tag">웹소설·웹툰</span>
+        <span class="now-tag">기획 중</span>
+      </div>
+    </div>
+
+    <div class="now-card r d2">
+      <div class="now-card-num">05</div>
+      <div class="now-status"><span class="dot muted"></span>준비 중</div>
+      <div class="now-card-title">투고 준비</div>
+      <div class="now-card-sub">Publishing Submission</div>
+      <div class="now-card-desc">IF 드래곤편 완결 후 에이전시 투고 또는 조아라·카카오페이지 직접 투고 준비 중. 편집 과정을 거쳐 공식 연재 데뷔를 목표로 한다.</div>
+      <div class="now-card-tags">
+        <span class="now-tag">카카오페이지</span>
+        <span class="now-tag">에이전시</span>
+        <span class="now-tag">데뷔 준비</span>
+      </div>
+    </div>
+
+    <div class="now-card r d3">
+      <div class="now-card-num">06</div>
+      <div class="now-status"><span class="dot amber"></span>진행 중</div>
+      <div class="now-card-title">AI 비주얼 작업</div>
+      <div class="now-card-sub">AI Visual Series</div>
+      <div class="now-card-desc">캐릭터 이미지 및 세계관 비주얼을 AI 이미지 생성 도구로 제작. 텍스트로만 존재하던 인물들에게 형태를 부여하는 작업.</div>
+      <div class="now-card-tags">
+        <span class="now-tag">AI 이미지</span>
+        <span class="now-tag">캐릭터 비주얼</span>
+        <span class="now-tag">연재 중</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hr"></div>
+
+<!-- ════════════════════════════════
+     WORKS
+════════════════════════════════ -->
+<section id="works">
+  <div class="s-label">Works</div>
+  <h2 class="s-title">작업물</h2>
+
+  <div class="works-tabs">
+    <button class="tab-btn active" data-tab="video">영상</button>
+    <button class="tab-btn" data-tab="music">음악</button>
+    <button class="tab-btn" data-tab="image">비주얼</button>
+    <button class="tab-btn" data-tab="writing">글</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-video">
+    <div class="video-grid">
+      <div class="video-card r d1">
+        <div class="video-thumb">
+          <!-- 유튜브 embed: <iframe src="https://www.youtube.com/embed/VIDEO_ID" allowfullscreen></iframe> -->
+          <div class="img-placeholder" style="font-size:2rem;color:rgba(245,237,216,.06)">▷</div>
+          <div class="play-icon">
+            <svg width="14" height="16" viewBox="0 0 14 16" fill="white"><path d="M2 1l10 7L2 15V1z"/></svg>
+          </div>
+        </div>
+        <div class="video-info">
+          <div class="video-tag">캐릭터 OST MV · Suno</div>
+          <div class="video-title">펠리르 테마 뮤직비디오</div>
+          <div class="video-desc">에테르노 왕국의 드래곤 왕자 펠리르를 위한 테마. 불꽃과 진심 사이.</div>
+        </div>
+      </div>
+
+      <div class="video-card r d2">
+        <div class="video-thumb">
+          <div class="img-placeholder" style="font-size:2rem;color:rgba(245,237,216,.06)">▷</div>
+          <div class="play-icon">
+            <svg width="14" height="16" viewBox="0 0 14 16" fill="white"><path d="M2 1l10 7L2 15V1z"/></svg>
+          </div>
+        </div>
+        <div class="video-info">
+          <div class="video-tag">캐릭터 OST MV · Suno</div>
+          <div class="video-title">바르가스 테마 뮤직비디오</div>
+          <div class="video-desc">루베인 공작 바르가스. 어둠 속에서 한 번 잃은 빛을 기억하는 자.</div>
+        </div>
+      </div>
+
+      <div class="video-card r d3" style="border-style:dashed;opacity:.3;cursor:default;">
+        <div class="video-thumb" style="background:rgba(245,237,216,.01);">
+          <div style="font-family:'Space Mono',monospace;font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(245,237,216,.18);">영상 추가 예정</div>
+        </div>
+        <div class="video-info">
+          <div class="video-tag">Coming Soon</div>
+          <div class="video-title" style="color:rgba(245,237,216,.2);">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-music">
+    <div class="music-list">
+      <div class="music-item r d1">
+        <div class="music-num">01</div>
+        <div><div class="music-title">펠리르 테마</div><div class="music-sub">Felir's Theme — 에테르노 왕국의 불꽃 / Suno 제작</div></div>
+        <div class="music-tag">캐릭터 OST</div>
+      </div>
+      <div class="music-item r d2">
+        <div class="music-num">02</div>
+        <div><div class="music-title">바르가스 테마</div><div class="music-sub">Várgas's Theme — 루베인 공작의 어둠 / Suno 제작</div></div>
+        <div class="music-tag">캐릭터 OST</div>
+      </div>
+      <div class="music-item r d3" style="opacity:.32;cursor:default;">
+        <div class="music-num">03</div>
+        <div><div class="music-title" style="color:rgba(245,237,216,.28);">여주 테마 (제작 중)</div><div class="music-sub">경계에서 머무는 자의 노래</div></div>
+        <div class="music-tag" style="border-style:dashed;">Coming Soon</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-image">
+    <div class="img-grid">
+      <div class="img-card r d1">
+        <!-- <img src="felir.jpg" alt="펠리르"> -->
+        <div class="img-placeholder">F</div>
+        <div class="img-overlay"></div>
+        <div class="img-label">펠리르 · 드래곤 왕자</div>
+      </div>
+      <div class="img-card r d2">
+        <div class="img-placeholder">V</div>
+        <div class="img-overlay"></div>
+        <div class="img-label">바르가스 · 루베인 공작</div>
+      </div>
+      <div class="img-card r d3">
+        <div class="img-placeholder">H</div>
+        <div class="img-overlay"></div>
+        <div class="img-label">여주 · 경계의 빛</div>
+      </div>
+      <div class="img-card r d1">
+        <div class="img-placeholder" style="font-size:1.8rem;">에테르노</div>
+        <div class="img-overlay"></div>
+        <div class="img-label">에테르노 왕국</div>
+      </div>
+      <div class="img-card r d2" style="border-style:dashed;opacity:.25;cursor:default;">
+        <div class="img-placeholder" style="font-size:1.5rem;">+</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-writing">
+    <div class="music-list">
+      <div class="music-item r d1">
+        <div class="music-num">01</div>
+        <div><div class="music-title">IF 드래곤편</div><div class="music-sub">장편 로맨스판타지 웹소설 · 집필 중 (~80화 / 150화)</div></div>
+        <div class="music-tag">메인 프로젝트</div>
+      </div>
+      <div class="music-item r d2">
+        <div class="music-num">02</div>
+        <div><div class="music-title">바르가스 외전 — 전편</div><div class="music-sub">루베인 공작의 기억 · IF 드래곤편 사이드 스토리</div></div>
+        <div class="music-tag">단편 완성</div>
+      </div>
+      <div class="music-item r d3">
+        <div class="music-num">03</div>
+        <div><div class="music-title">공모전 출품 단편</div><div class="music-sub">경계의 비 세계관 기반 · 준비 중</div></div>
+        <div class="music-tag">준비 중</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hr"></div>
+
+<!-- ════════════════════════════════
+     CONTESTS
+════════════════════════════════ -->
+<section id="contests">
+  <div class="s-label">Contests &amp; History</div>
+  <h2 class="s-title">공모전 &amp;<br><em>수상 이력</em></h2>
+
+  <div class="contest-list">
+    <div class="contest-row r d1">
+      <div class="contest-year">2025</div>
+      <div>
+        <div class="contest-name">카카오페이지 로맨스판타지 공모전</div>
+        <div class="contest-desc">IF 드래곤편으로 투고 준비 중. 상업적 완성도와 메시지 깊이를 동시에 구현한 150화 완결 장편.</div>
+      </div>
+      <div class="badge badge-prep">준비 중</div>
+    </div>
+    <div class="contest-row r d2">
+      <div class="contest-year">2025</div>
+      <div>
+        <div class="contest-name">웹소설 플랫폼 신인 공모전</div>
+        <div class="contest-desc">로맨스판타지 장르 신인 작가 공모전. 원고 다듬기 진행 중.</div>
+      </div>
+      <div class="badge badge-prep">준비 중</div>
+    </div>
+    <div class="contest-row r d3">
+      <div class="contest-year">단편</div>
+      <div>
+        <div class="contest-name">단편 소설 공모전 출품</div>
+        <div class="contest-desc">경계의 비 세계관 기반 단편. 경계인의 내면을 절제된 문체로 담은 독립 작품.</div>
+      </div>
+      <div class="badge badge-submit">출품작</div>
+    </div>
+  </div>
+</section>
+
+<div class="hr"></div>
+
+<!-- ════════════════════════════════
+     CONTACT
+════════════════════════════════ -->
+<section id="contact">
+  <!-- contact 섹션 미니 사막 언덕 -->
+  <div class="contact-dune">
+    <svg viewBox="0 0 1440 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="duneC" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0D0A18" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#070510" stop-opacity="1"/>
+        </linearGradient>
+      </defs>
+      <path d="M0 200 L0 130 C150 118, 260 108, 380 112 C500 116, 580 128, 680 122 C780 116, 860 100, 960 96 C1060 92, 1180 104, 1300 114 C1360 119, 1400 124, 1440 126 L1440 200 Z"
+        fill="url(#duneC)" opacity="0.9"/>
+    </svg>
+  </div>
+
+  <div class="contact-inner">
+    <div class="contact-eyebrow r">Contact</div>
+    <h2 class="contact-title r">이야기를<br><em>나누고 싶다면</em></h2>
+    <p class="contact-desc r">
+      원고 문의, 협업 제안, 에이전시 투고 관련 연락은 아래 이메일로 주세요.<br>
+      세계관에 공감하는 분들의 이야기도 언제나 환영합니다.
+    </p>
+    <a href="/cdn-cgi/l/email-protection#3c4553494e7c59515d5550125f5351" class="contact-email r"><span class="__cf_email__" data-cfemail="7d0412080f3d18101c1411531e1210">[email&#160;protected]</span></a>
+    <div class="contact-note r">* 답장에 1–3일 소요될 수 있습니다</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════
+     FOOTER
+════════════════════════════════ -->
+<footer>
+  <div class="footer-l">limn studio</div>
+  <div class="footer-r">© 2025 · All rights reserved · 무단 전재 금지</div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+/* ── 별 캔버스 ── */
+(function(){
+  const canvas = document.getElementById('stars-canvas');
+  const ctx    = canvas.getContext('2d');
+  let stars = [];
+
+  function resize(){
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function init(){
+    stars = [];
+    const n = Math.floor((canvas.width * canvas.height) / 5800);
+    for(let i=0;i<n;i++){
+      const rnd = Math.random();
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * 0.78, /* 상단 78%에만 별 */
+        r: Math.random() * 1.3 + 0.2,
+        a: Math.random() * 0.7 + 0.15,
+        spd: Math.random() * 0.003 + 0.0008,
+        ph: Math.random() * Math.PI * 2,
+        col: rnd > 0.88
+          ? 'rgba(184,212,232,'   /* 청색 */
+          : rnd > 0.74
+          ? 'rgba(232,200,122,'   /* 금색 */
+          : 'rgba(245,237,216,'   /* 백색 */
+      });
+    }
+  }
+
+  let t = 0;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    t += 0.012;
+    stars.forEach(s => {
+      const a = s.a * (0.45 + 0.55 * Math.sin(t * s.spd * 55 + s.ph));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = s.col + a + ')';
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  resize(); init(); draw();
+  window.addEventListener('resize', ()=>{ resize(); init(); });
+})();
+
+/* ── 커서 글로우 ── */
+const cg = document.getElementById('cg');
+document.addEventListener('mousemove', e => {
+  cg.style.left = e.clientX + 'px';
+  cg.style.top  = e.clientY + 'px';
+});
+
+/* ── 스크롤 reveal ── */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); }
+  });
+}, { threshold: 0.07 });
+document.querySelectorAll('.r').forEach(el => io.observe(el));
+
+/* ── nav 스크롤 ── */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+});
+
+/* ── 탭 ── */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove
