@@ -87,7 +87,8 @@ body {
   position: absolute; inset:0;
   pointer-events:none;
   overflow:hidden;
-  opacity: 0.18;
+  opacity: 0.22;
+  z-index: 3;
 }
 .rain-canvas {
   width:100%; height:100%;
@@ -102,6 +103,7 @@ body {
   border-radius:50%;
   animation: doorPulse 5s ease-in-out infinite;
   pointer-events:none;
+  z-index: 4;
 }
 @keyframes doorPulse {
   0%,100% { opacity:.6; transform:translateX(-10%) scale(1); }
@@ -771,7 +773,7 @@ footer {
     <h2 class="s-heading r d1">함께 작업해요</h2>
     <p class="s-desc r d2">Creative direction, visual concept development,<br>AI-based content work, and collaborative storytelling inquiries are welcome.</p>
     <div class="contact-btns r d3">
-      <a href="mailto:your@email.com" class="btn-primary">Email</a>
+      <a href="/cdn-cgi/l/email-protection#f1889e8483b1949c90989ddf929e9c" class="btn-primary">Email</a>
       <a href="#" class="btn-secondary">Instagram</a>
     </div>
   </div>
@@ -783,7 +785,7 @@ footer {
   <span class="footer-copy">© 2026 AeSol Moon · limn studio</span>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 /* ── 비 캔버스 ── */
 (function(){
   const canvas = document.getElementById('rainCanvas');
@@ -856,10 +858,4 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     const t = document.getElementById('tab-'+btn.dataset.tab);
-    if(t){ t.classList.add('active'); }
-    else { document.getElementById('tab-all').classList.add('active'); }
-  });
-});
-</script>
-</body>
-</html>
+    
