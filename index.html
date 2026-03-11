@@ -37,14 +37,25 @@ body { background:var(--bg); color:var(--text); font-family:'Gowun Batang',serif
   height:100vh; display:flex; flex-direction:column;
   justify-content:flex-end; padding:0 48px 80px;
   position:relative; overflow:hidden;
-  background:linear-gradient(180deg, var(--bg) 0%, #0a1520 50%, var(--bg) 100%);
+  background:#050507;
 }
-#hero-stars { position:absolute; inset:0; z-index:0; pointer-events:none; }
+.hero-bg {
+  position:absolute; inset:0; z-index:0;
+  background-image:url('hero.png');
+  background-size:cover;
+  background-position:center 30%;
+  opacity:0.55;
+}
+.hero-overlay {
+  position:absolute; inset:0; z-index:1;
+  background:linear-gradient(180deg,rgba(5,5,7,0.3) 0%,rgba(5,5,7,0.1) 40%,rgba(5,5,7,0.7) 80%,rgba(5,5,7,1) 100%);
+}
+#hero-stars { position:absolute; inset:0; z-index:2; pointer-events:none; }
 .door-glow {
   position:absolute; left:50%; top:42%; transform:translate(-50%,-50%);
   width:140px; height:200px;
-  background:radial-gradient(ellipse, rgba(255,233,166,0.1) 0%, transparent 70%);
-  border-radius:70px 70px 0 0; z-index:1;
+  background:radial-gradient(ellipse, rgba(255,233,166,0.12) 0%, transparent 70%);
+  border-radius:70px 70px 0 0; z-index:3;
   animation:doorPulse 3s ease-in-out infinite;
 }
 @keyframes doorPulse {
@@ -53,8 +64,8 @@ body { background:var(--bg); color:var(--text); font-family:'Gowun Batang',serif
 }
 .light-beam {
   position:absolute; left:50%; top:0; transform:translateX(-50%);
-  width:1px; height:44%; z-index:1;
-  background:linear-gradient(180deg,transparent 0%,rgba(255,233,166,0.12) 50%,rgba(255,233,166,0.3) 100%);
+  width:1px; height:44%; z-index:3;
+  background:linear-gradient(180deg,transparent 0%,rgba(255,233,166,0.15) 50%,rgba(255,233,166,0.35) 100%);
   animation:beamPulse 4s ease-in-out infinite;
 }
 @keyframes beamPulse {
@@ -155,6 +166,8 @@ footer { border-top:1px solid var(--border); padding:40px 48px; display:flex; ju
 </nav>
 
 <section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
   <canvas id="hero-stars"></canvas>
   <div class="light-beam"></div>
   <div class="door-glow"></div>
